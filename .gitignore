@@ -1,0 +1,6 @@
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+
+# IGNORAR O ARQUIVO DE SENHAS E SEGREDOS!
+.streamlit/secrets.toml
