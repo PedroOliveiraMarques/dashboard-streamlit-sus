@@ -114,7 +114,7 @@ if engine:
 
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
             municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
-            if municipios_selecionados != "Todas":
+            if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
