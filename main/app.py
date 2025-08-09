@@ -91,7 +91,21 @@ if engine:
         with col_filtros:
             st.header("Filtros")
             
-            anos_disponiveis = sorted(df['ano_aih'].unique(), reverse=True)
+            ufs_disponiveis = sorted(df['uf_nome'].unique())
+            ufs_disponiveis.insert(0, "Todas")
+            uf_selecionada = st.selectbox('Selecione a UF:', ufs_disponiveis)
+
+            if uf_selecionada != "Todas":
+                df_filtrado = df[df['uf_nome'] == uf_selecionada]
+
+            municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
+            municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
+            if municipios_selecionados:
+                df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
+
+            st.markdown("---")
+
+            anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
             ano_selecionado = st.selectbox('Selecione o Ano:', anos_disponiveis)
             if ano_selecionado:
                 df_filtrado = df_filtrado[df_filtrado['ano_aih'] == ano_selecionado]
@@ -101,11 +115,6 @@ if engine:
             mes_selecionado = st.selectbox('Selecione o Mês:', meses_disponiveis)
             if mes_selecionado != "Todos os meses":
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'] == mes_selecionado]
-
-            municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
-            municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
-            if municipios_selecionados:
-                df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
         with col_conteudo:
             tab1, tab2, tab3 = st.tabs(["Visão Geral", "Análise Temporal", "Dados Brutos"])
