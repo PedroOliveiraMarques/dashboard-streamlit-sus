@@ -99,42 +99,35 @@ if engine:
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- LAYOUT PRINCIPAL: FILTROS NA ESQUERDA, CONTEÚDO NA DIREITA ---
         col_filtros, col_conteudo = st.columns([1, 3])
 
         df_filtrado = df
 
-        # === COLUNA DE FILTROS ===
         with col_filtros:
             st.header("Filtros")
             
-            # Filtro de UF
-            ufs_disponiveis = sorted(df['uf'].unique())
+            ufs_disponiveis = sorted(df['uf_nome'].unique())
             ufs_disponiveis.insert(0, "Todas")
             uf_selecionada = st.selectbox('Selecione a UF:', ufs_disponiveis)
             if uf_selecionada != "Todas":
-                df_filtrado = df_filtrado[df_filtrado['uf'] == uf_selecionada]
+                df_filtrado = df_filtrado[df_filtrado['uf_nome'] == uf_selecionada]
 
-            # Filtro de Municípios
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
             municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
-            # Filtro de Ano
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
             ano_selecionado = st.selectbox('Selecione o Ano:', anos_disponiveis)
             if ano_selecionado:
                 df_filtrado = df_filtrado[df_filtrado['ano_aih'] == ano_selecionado]
 
-            # Filtro de Mês
             meses_disponiveis = sorted(df_filtrado['mes_aih'].unique())
             meses_disponiveis.insert(0, "Todos os meses")
             mes_selecionado = st.selectbox('Selecione o Mês:', meses_disponiveis)
             if mes_selecionado != "Todos os meses":
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'] == mes_selecionado]
 
-        # === COLUNA DE CONTEÚDO ===
         with col_conteudo:
             tab1, tab2, tab3 = st.tabs(["Visão Geral por Município", "Análise Temporal", "Dados Brutos"])
 
