@@ -57,7 +57,7 @@ def run_query(query, _engine):
 engine = init_connection()
 
 if engine:
-    minha_query = 'SELECT * FROM "Projeto_Integrador"."SUA_NOVA_TABELA_RIDE";'
+    minha_query = 'SELECT * FROM public.sus_ride_df_aih;'
     df = run_query(minha_query, engine)
 
     if df is not None and not df.empty:
