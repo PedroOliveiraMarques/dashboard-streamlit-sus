@@ -3,8 +3,49 @@ import pandas as pd
 from sqlalchemy import create_engine, text
 import plotly.express as px
 
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Dashboard AIH - RIDE", layout="wide")
 
+# --- CSS CUSTOMIZADO PARA O ESTILO ---
+st.markdown("""
+<style>
+    /* Remove o padding do topo da página */
+    .block-container {
+        padding-top: 2rem !important;
+    }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Estilo do Header Principal */
+    .header-container {
+        background-color: #1D355B; /* Azul Principal */
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    /* Estilo das caixas de métrica (KPIs) */
+    .kpi-card {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .kpi-card .stMetricValue {
+        color: white;
+        font-size: 2em;
+    }
+    .kpi-card .stMetricLabel {
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- FUNÇÕES DE BANCO DE DADOS E CARREGAMENTO DE DADOS ---
 @st.cache_resource
 def init_connection():
     try:
@@ -24,7 +65,8 @@ def run_query(query, _engine):
     except Exception as e:
         st.error(f"Erro ao executar a consulta: {e}")
         return None
-        
+
+# --- INÍCIO DA APLICAÇÃO ---
 engine = init_connection()
 
 if engine:
@@ -33,12 +75,14 @@ if engine:
 
     if df is not None and not df.empty:
         
+        # --- HEADER COM TÍTULO E KPIs ---
         with st.container():
             st.markdown('<div class="header-container">', unsafe_allow_html=True)
             st.title("🏥 Análise de Internações (AIH) na RIDE-DF")
-            st.markdown("Dashboard interativo para exploração de dados de Autorizações de Internação Hospitalar do DATASUS, com foco na Região Integrada de Desenvolvimento do DF e Entorno.")
+            st.markdown("Dashboard interativo para exploração de dados de Autorizações de Internação Hospitalar do DATASUS.")
             st.markdown("---")
             
+            # KPIs Dinâmicos baseados no dataframe completo
             kpi1, kpi2, kpi3 = st.columns(3)
             with kpi1:
                 st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
@@ -55,60 +99,66 @@ if engine:
 
             st.markdown('</div>', unsafe_allow_html=True)
 
+        # --- LAYOUT PRINCIPAL: FILTROS NA ESQUERDA, CONTEÚDO NA DIREITA ---
         col_filtros, col_conteudo = st.columns([1, 3])
 
         df_filtrado = df
 
+        # === COLUNA DE FILTROS ===
         with col_filtros:
             st.header("Filtros")
             
-            ufs_disponiveis = sorted(df['uf_nome'].unique())
+            # Filtro de UF
+            ufs_disponiveis = sorted(df['uf'].unique())
             ufs_disponiveis.insert(0, "Todas")
             uf_selecionada = st.selectbox('Selecione a UF:', ufs_disponiveis)
-
             if uf_selecionada != "Todas":
-                df_filtrado = df[df['uf_nome'] == uf_selecionada]
+                df_filtrado = df_filtrado[df_filtrado['uf'] == uf_selecionada]
 
+            # Filtro de Municípios
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
             municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
-            st.markdown("---")
-
+            # Filtro de Ano
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
             ano_selecionado = st.selectbox('Selecione o Ano:', anos_disponiveis)
             if ano_selecionado:
                 df_filtrado = df_filtrado[df_filtrado['ano_aih'] == ano_selecionado]
 
+            # Filtro de Mês
             meses_disponiveis = sorted(df_filtrado['mes_aih'].unique())
             meses_disponiveis.insert(0, "Todos os meses")
             mes_selecionado = st.selectbox('Selecione o Mês:', meses_disponiveis)
             if mes_selecionado != "Todos os meses":
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'] == mes_selecionado]
 
+        # === COLUNA DE CONTEÚDO ===
         with col_conteudo:
-            tab1, tab2, tab3 = st.tabs(["Visão Geral", "Análise Temporal", "Dados Brutos"])
+            tab1, tab2, tab3 = st.tabs(["Visão Geral por Município", "Análise Temporal", "Dados Brutos"])
 
             with tab1:
-                st.subheader(f"Análise para a seleção atual")
+                st.subheader("Análise de Ranking por Município")
                 
-                st.markdown("##### Valor Total por Município")
-                soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
+                st.markdown("##### Valor Total (R$)")
+                soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False).head(15)
                 st.bar_chart(soma_por_municipio)
 
-                st.markdown("##### Quantidade Total por Município")
-                qtd_por_municipio = df_filtrado.groupby('nome_municipio')['qtd_total'].sum().sort_values(ascending=False)
+                st.markdown("##### Quantidade Total")
+                qtd_por_municipio = df_filtrado.groupby('nome_municipio')['qtd_total'].sum().sort_values(ascending=False).head(15)
                 st.bar_chart(qtd_por_municipio, color="#D13F42")
                 
             with tab2:
                 st.subheader("Evolução Mensal do Valor Total")
                 
                 df_temporal = df_filtrado.copy()
-                df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
-                soma_mensal = df_temporal.groupby('data')['vl_total'].sum()
-                
-                st.line_chart(soma_mensal)
+                if not df_temporal.empty:
+                    df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
+                    soma_mensal = df_temporal.groupby('data')['vl_total'].sum()
+                    st.line_chart(soma_mensal)
+                else:
+                    st.warning("Não há dados para exibir com os filtros selecionados.")
             
             with tab3:
                 st.subheader("Amostra dos Dados Filtrados")
