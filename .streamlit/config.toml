@@ -1,0 +1,17 @@
+[theme]
+# Cor primária para elementos interativos (botões, abas selecionadas, etc.)
+# Vou usar o vermelho que você já tinha escolhido.
+primaryColor="#D13F42"
+
+# Cor de fundo principal da área de conteúdo
+backgroundColor="#F0F2F6"
+
+# Cor de fundo para a barra lateral e cabeçalhos
+# Vou usar o azul escuro do seu exemplo e que você já tinha escolhido.
+secondaryBackgroundColor="#1D345B"
+
+# Cor do texto principal (no fundo claro)
+textColor="#0F172A"
+
+# Fonte padrão
+font="sans serif"

@@ -5,35 +5,6 @@ import plotly.express as px
 
 st.set_page_config(page_title="Dashboard AIH - RIDE", layout="wide")
 
-st.markdown("""
-<style>
-    .main .block-container {
-        padding-top: 1rem;
-    }
-    .header-container {
-        background-color: #1D345B;
-        padding: 2rem 2rem 2.5rem 2rem;
-        border-radius: 10px;
-        color: white;
-        margin-bottom: 2rem;
-    }
-    .kpi-card {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 1.5rem;
-        border-radius: 10px;
-        text-align: center;
-    }
-    .kpi-card .stMetricValue {
-        color: white;
-        font-size: 2.2em;
-    }
-    .kpi-card .stMetricLabel {
-        color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 0.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 @st.cache_resource
 def init_connection():
     try:
