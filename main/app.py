@@ -165,7 +165,7 @@ if engine:
                         st.bar_chart(qtd_por_regiao, color="#D13F42")
                     
                 with tab3:
-                    st.markdown("##### Evolução Mensal do Valor Total (R$)")
+                    st.subheader("Evolução Mensal do Valor Total (R$)")
                     df_temporal = df_filtrado.copy()
                     df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
                     soma_mensal = df_temporal.groupby('data')['vl_total'].sum().sort_index()
@@ -173,17 +173,39 @@ if engine:
                 
                 with tab4:
                     st.subheader("Análise Geográfica por Município (Mapa de Calor)")
-                    if 'lat' in df_filtrado.columns:
+                    
+                    st.info("1. Entrando na aba do mapa.")
+
+                    if 'lat' in df_filtrado.columns and 'lon' in df_filtrado.columns:
+                        st.success("2. Colunas 'lat' e 'lon' encontradas no DataFrame.")
+                        
                         df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
+                        st.write(f"3. Após remover dados nulos, restam {len(df_mapa)} linhas para o mapa.")
+                        
                         if not df_mapa.empty:
-                            mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
-                            dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
-                            HeatMap(dados_calor, radius=15).add_to(mapa_calor)
-                            st_folium(mapa_calor, use_container_width=True, height=500)
+                            st.success("4. DataFrame para o mapa não está vazio. Tentando criar o mapa...")
+                            
+                            try:
+                                location_mean = [df_mapa['lat'].mean(), df_mapa['lon'].mean()]
+                                st.write(f"5. Ponto central do mapa calculado: {location_mean}")
+
+                                mapa_calor = folium.Map(location=location_mean, zoom_start=8, tiles="cartodbdark_matter")
+                                dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
+                                st.write(f"6. Preparando {len(dados_calor)} pontos para a camada de calor.")
+
+                                HeatMap(dados_calor, radius=15).add_to(mapa_calor)
+                                st.success("7. Camada de calor adicionada. Tentando renderizar o mapa...")
+
+                                st_folium(mapa_calor, use_container_width=True, height=500)
+                                st.success("8. Renderização do mapa finalizada.")
+
+                            except Exception as e:
+                                st.error(f"Ocorreu um erro DURANTE a criação do mapa: {e}")
+                        
                         else:
-                            st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
+                            st.warning("O dataframe para o mapa ficou vazio após a limpeza de dados nulos.")
                     else:
-                        st.warning("Colunas 'latitude' e 'longitude' não encontradas nos dados do banco.")
+                        st.warning("As colunas 'lat' e/ou 'lon' não foram encontradas no dataframe filtrado.")
 
                 with tab5:
                     st.subheader("Amostra dos Dados Filtrados")
