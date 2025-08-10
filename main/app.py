@@ -68,7 +68,6 @@ if engine:
     df = run_query(minha_query, engine)
 
     if df is not None and not df.empty:
-        # Renomeia as colunas de coordenadas que vêm do banco
         if 'latitude' in df.columns and 'longitude' in df.columns:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
         
@@ -108,6 +107,12 @@ if engine:
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
+            if 'faixa_populacao' in df_filtrado.columns:
+                faixas_disponiveis = sorted(df_filtrado['faixa_populacao'].unique())
+                faixas_selecionadas = st.multiselect('Selecione a(s) faixa(s) populacional(is):', faixas_disponiveis, placeholder="Todas as Faixas")
+                if faixas_selecionadas:
+                    df_filtrado = df_filtrado[df_filtrado['faixa_populacao'].isin(faixas_selecionadas)]
+
             st.markdown("---")
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
             anos_selecionados = st.multiselect('Selecione o(s) ano(s):', anos_disponiveis, placeholder="Todos os Anos")
@@ -123,27 +128,52 @@ if engine:
             if df_filtrado.empty:
                 st.warning("Nenhum registro encontrado para a combinação de filtros selecionada.")
             else:
-                tab1, tab2, tab3, tab4 = st.tabs(["Visão Geral", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
+                st.subheader("Indicadores Dinâmicos da Seleção")
+                kpi_d1, kpi_d2 = st.columns(2)
+                populacao_filtrada = df_filtrado.drop_duplicates(subset=['codigo_municipio'])['numero_habitantes'].sum()
+                if populacao_filtrada > 0:
+                    valor_por_habitante = df_filtrado['vl_total'].sum() / populacao_filtrada
+                    kpi_d1.metric("Valor por Habitante (R$)", f"{valor_por_habitante:,.2f}")
+                    internacoes_por_1000_hab = (len(df_filtrado) / populacao_filtrada) * 1000
+                    kpi_d2.metric("Internações por 1.000 Habitantes", f"{internacoes_por_1000_hab:,.2f}")
+                st.markdown("---")
+                
+                tab1, tab2, tab3, tab4, tab5 = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
 
                 with tab1:
-                    st.subheader(f"Análise para a seleção atual")
-                    st.markdown("##### Valor Total por Município")
+                    st.subheader(f"Análise de Ranking por Município")
+                    st.markdown("##### Valor Total por Município (R$)")
                     soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
                     st.bar_chart(soma_por_municipio)
-                    st.markdown("##### Quantidade Total por Município")
-                    qtd_por_municipio = df_filtrado.groupby('nome_municipio')['qtd_total'].sum().sort_values(ascending=False)
-                    st.bar_chart(qtd_por_municipio, color="#D13F42")
-                    
+                    if populacao_filtrada > 0:
+                        st.markdown("##### Top 15 Municípios por Valor Gasto por Habitante (R$)")
+                        df_per_capita = df_filtrado.groupby('nome_municipio').agg(
+                            vl_total_sum=('vl_total', 'sum'),
+                            populacao_sum=('numero_habitantes', 'first')
+                        )
+                        df_per_capita['valor_por_habitante'] = df_per_capita['vl_total_sum'] / df_per_capita['populacao_sum']
+                        st.bar_chart(df_per_capita['valor_por_habitante'].sort_values(ascending=False).head(15), color="#D13F42")
+
                 with tab2:
-                    st.subheader("Evolução Mensal do Valor Total")
+                    st.subheader("Análise de Ranking por Região")
+                    if 'regiao_nome' in df_filtrado.columns:
+                        st.markdown("##### Valor Total por Região (R$)")
+                        soma_por_regiao = df_filtrado.groupby('regiao_nome')['vl_total'].sum().sort_values(ascending=False)
+                        st.bar_chart(soma_por_regiao)
+                        st.markdown("##### Quantidade Total por Região")
+                        qtd_por_regiao = df_filtrado.groupby('regiao_nome')['qtd_total'].sum().sort_values(ascending=False)
+                        st.bar_chart(qtd_por_regiao, color="#D13F42")
+                    
+                with tab3:
+                    st.markdown("##### Evolução Mensal do Valor Total (R$)")
                     df_temporal = df_filtrado.copy()
                     df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
                     soma_mensal = df_temporal.groupby('data')['vl_total'].sum().sort_index()
                     st.line_chart(soma_mensal)
                 
-                with tab3:
+                with tab4:
                     st.subheader("Análise Geográfica por Município (Mapa de Calor)")
-                    if 'lat' in df_filtrado.columns and 'lon' in df_filtrado.columns:
+                    if 'lat' in df_filtrado.columns:
                         df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
                         if not df_mapa.empty:
                             mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
@@ -153,9 +183,9 @@ if engine:
                         else:
                             st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
                     else:
-                        st.warning("Colunas de latitude e longitude não encontradas nos dados.")
+                        st.warning("Colunas 'latitude' e 'longitude' não encontradas nos dados do banco.")
 
-                with tab4:
+                with tab5:
                     st.subheader("Amostra dos Dados Filtrados")
                     st.dataframe(df_filtrado.head(100))
     else:
