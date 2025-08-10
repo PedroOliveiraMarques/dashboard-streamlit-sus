@@ -158,7 +158,6 @@ if engine:
             with tab3:
                 st.subheader("Análise Geográfica por Município (Mapa de Calor)")
 
-                # --- INÍCIO DO CÓDIGO DE DEPURAÇÃO ---
                 st.markdown("---")
                 st.subheader("🕵️‍♂️ Verificando os Dados para o Mapa")
 
@@ -177,9 +176,8 @@ if engine:
                     st.warning("O dataframe para o mapa ficou vazio. Verifique os filtros ou os dados de geolocalização.")
 
                 st.markdown("---")
-                # --- FIM DO CÓDIGO DE DEPURAÇÃO ---
 
-                df_mapa = df_filtrado.dropna(subset=['lat', 'lon'])
+                df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
 
                 if not df_mapa.empty:
                     mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
