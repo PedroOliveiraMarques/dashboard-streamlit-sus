@@ -10,12 +10,9 @@ st.markdown("""
     .main .block-container {
         padding-top: 1rem;
     }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
     .header-container {
-        background-color: #1D355B;
-        padding: 2rem;
+        background-color: #1D345B;
+        padding: 2rem 2rem 2.5rem 2rem;
         border-radius: 10px;
         color: white;
         margin-bottom: 2rem;
@@ -25,7 +22,6 @@ st.markdown("""
         padding: 1.5rem;
         border-radius: 10px;
         text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .kpi-card .stMetricValue {
         color: white;
@@ -57,11 +53,11 @@ def run_query(query, _engine):
     except Exception as e:
         st.error(f"Erro ao executar a consulta: {e}")
         return None
-
+        
 engine = init_connection()
 
 if engine:
-    minha_query = 'SELECT * FROM public.sus_ride_df_aih;'
+    minha_query = 'SELECT * FROM "Projeto_Integrador"."SUA_NOVA_TABELA_RIDE";'
     df = run_query(minha_query, engine)
 
     if df is not None and not df.empty:
@@ -69,7 +65,7 @@ if engine:
         with st.container():
             st.markdown('<div class="header-container">', unsafe_allow_html=True)
             st.title("🏥 Análise de Internações (AIH) na RIDE-DF")
-            st.markdown("Dashboard interativo para exploração de dados de Autorizações de Internação Hospitalar do DATASUS.")
+            st.markdown("Dashboard interativo para exploração de dados de Autorizações de Internação Hospitalar do DATASUS, com foco na Região Integrada de Desenvolvimento do DF e Entorno.")
             st.markdown("---")
             
             kpi1, kpi2, kpi3 = st.columns(3)
@@ -95,25 +91,7 @@ if engine:
         with col_filtros:
             st.header("Filtros")
             
-            ufs_disponiveis = sorted(df['uf_nome'].unique())
-            ufs_disponiveis.insert(0, "Todas")
-            uf_selecionada = st.selectbox('Selecione a UF:', ufs_disponiveis)
-
-            if uf_selecionada != "Todas":
-                df_filtrado = df[df['uf_nome'] == uf_selecionada]
-            
-            municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
-            municipios_selecionados = st.multiselect(
-                'Selecione um ou mais municípios:', 
-                municipios_disponiveis,
-                placeholder="Todos"
-            )
-            if municipios_selecionados:
-                df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
-
-            st.markdown("---") 
-
-            anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
+            anos_disponiveis = sorted(df['ano_aih'].unique(), reverse=True)
             ano_selecionado = st.selectbox('Selecione o Ano:', anos_disponiveis)
             if ano_selecionado:
                 df_filtrado = df_filtrado[df_filtrado['ano_aih'] == ano_selecionado]
@@ -123,6 +101,11 @@ if engine:
             mes_selecionado = st.selectbox('Selecione o Mês:', meses_disponiveis)
             if mes_selecionado != "Todos os meses":
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'] == mes_selecionado]
+
+            municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
+            municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis)
+            if municipios_selecionados:
+                df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
         with col_conteudo:
             tab1, tab2, tab3 = st.tabs(["Visão Geral", "Análise Temporal", "Dados Brutos"])
@@ -142,12 +125,10 @@ if engine:
                 st.subheader("Evolução Mensal do Valor Total")
                 
                 df_temporal = df_filtrado.copy()
-                if not df_temporal.empty:
-                    df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
-                    soma_mensal = df_temporal.groupby('data')['vl_total'].sum()
-                    st.line_chart(soma_mensal)
-                else:
-                    st.warning("Não há dados para exibir com os filtros selecionados.")
+                df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
+                soma_mensal = df_temporal.groupby('data')['vl_total'].sum()
+                
+                st.line_chart(soma_mensal)
             
             with tab3:
                 st.subheader("Amostra dos Dados Filtrados")
