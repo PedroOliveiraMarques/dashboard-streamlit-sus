@@ -157,26 +157,7 @@ if engine:
             
             with tab3:
                 st.subheader("Análise Geográfica por Município (Mapa de Calor)")
-
-                st.markdown("---")
-                st.subheader("🕵️‍♂️ Verificando os Dados para o Mapa")
-
-                st.write(f"Total de linhas após filtros da sidebar: **{len(df_filtrado)}**")
                 
-                df_mapa_debug = df_filtrado.dropna(subset=['lat', 'lon'])
-                st.write(f"Linhas restantes com coordenadas válidas (lat/lon): **{len(df_mapa_debug)}**")
-
-                if not df_mapa_debug.empty:
-                    st.write("Verificando os tipos de dados das colunas do mapa:")
-                    st.write(df_mapa_debug[['lat', 'lon', 'vl_total']].dtypes)
-                    
-                    st.write("Amostra dos dados que serão usados no mapa de calor:")
-                    st.dataframe(df_mapa_debug[['nome_municipio', 'lat', 'lon', 'vl_total']].head())
-                else:
-                    st.warning("O dataframe para o mapa ficou vazio. Verifique os filtros ou os dados de geolocalização.")
-
-                st.markdown("---")
-
                 df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
 
                 if not df_mapa.empty:
