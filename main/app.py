@@ -103,11 +103,10 @@ if engine:
                 df_filtrado = df[df['uf_nome'] == uf_selecionada]
             
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
-            # --- ALTERAÇÃO FEITA AQUI ---
             municipios_selecionados = st.multiselect(
                 'Selecione um ou mais municípios:', 
                 municipios_disponiveis,
-                placeholder="Todos"  # Define o texto padrão
+                placeholder="Todos"
             )
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
