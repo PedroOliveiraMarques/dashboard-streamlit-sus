@@ -65,10 +65,18 @@ def run_query(query, _engine):
 def carregar_dados_geo(caminho_arquivo):
     try:
         df_geo = pd.read_csv(caminho_arquivo)
-        rename_map = {'codigo_ibge': 'codigo_municipio', 'latitude': 'lat', 'longitude': 'lon'}
+        # --- CORREÇÃO FEITA AQUI ---
+        # Alterado de 'uf' para 'codigo_uf' para bater com o seu arquivo CSV
+        rename_map = {
+            'codigo_ibge': 'codigo_municipio', 
+            'latitude': 'lat', 
+            'longitude': 'lon',
+            'codigo_uf': 'uf_nome', 
+            'capital': 'capital'
+        }
         df_geo = df_geo.rename(columns=rename_map)
         df_geo['codigo_municipio'] = df_geo['codigo_municipio'].astype(str).str[:6]
-        return df_geo[['codigo_municipio', 'lat', 'lon']]
+        return df_geo[['codigo_municipio', 'lat', 'lon', 'uf_nome', 'capital']]
     except FileNotFoundError:
         return None
     except Exception as e:
@@ -112,63 +120,68 @@ if engine:
 
         with col_filtros:
             st.header("Filtros")
-            ufs_disponiveis = sorted(df['uf_nome'].unique())
-            ufs_selecionadas = st.multiselect('Selecione a(s) UF(s):', ufs_disponiveis, placeholder="Todas as UFs")
-            if ufs_selecionadas:
-                df_filtrado = df_filtrado[df_filtrado['uf_nome'].isin(ufs_selecionadas)]
+            
+            # Agora este filtro deve funcionar corretamente
+            if 'uf_nome' in df_filtrado.columns:
+                ufs_disponiveis = sorted(df_filtrado['uf_nome'].unique())
+                ufs_disponiveis.insert(0, "Todas")
+                uf_selecionada = st.selectbox('Selecione a UF:', ufs_disponiveis)
+                if uf_selecionada != "Todas":
+                    df_filtrado = df_filtrado[df_filtrado['uf_nome'] == uf_selecionada]
             
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
-            municipios_selecionados = st.multiselect('Selecione o(s) município(s):', municipios_disponiveis, placeholder="Todos")
+            municipios_selecionados = st.multiselect('Selecione um ou mais municípios:', municipios_disponiveis, placeholder="Todos")
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
             st.markdown("---")
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
-            anos_selecionados = st.multiselect('Selecione o(s) ano(s):', anos_disponiveis, placeholder="Todos os Anos")
-            if anos_selecionados:
-                df_filtrado = df_filtrado[df_filtrado['ano_aih'].isin(anos_selecionados)]
+            ano_selecionado = st.selectbox('Selecione o Ano:', anos_disponiveis)
+            if ano_selecionado:
+                df_filtrado = df_filtrado[df_filtrado['ano_aih'] == ano_selecionado]
 
             meses_disponiveis = sorted(df_filtrado['mes_aih'].unique())
-            meses_selecionados = st.multiselect('Selecione o(s) mes(es):', meses_disponiveis, placeholder="Todos os Meses")
-            if meses_selecionados:
-                df_filtrado = df_filtrado[df_filtrado['mes_aih'].isin(meses_selecionados)]
+            meses_disponiveis.insert(0, "Todos os meses")
+            mes_selecionado = st.selectbox('Selecione o Mês:', meses_disponiveis)
+            if mes_selecionado != "Todos os meses":
+                df_filtrado = df_filtrado[df_filtrado['mes_aih'] == mes_selecionado]
 
         with col_conteudo:
-            if df_filtrado.empty:
-                st.warning("Nenhum registro encontrado para a combinação de filtros selecionada.")
-            else:
-                tab1, tab2, tab3, tab4 = st.tabs(["Visão Geral", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
+            tab1, tab2, tab3, tab4 = st.tabs(["Visão Geral", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
 
-                with tab1:
-                    st.subheader("Análise para a seleção atual")
-                    st.markdown("##### Valor Total por Município")
-                    soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
-                    st.bar_chart(soma_por_municipio)
-                    st.markdown("##### Quantidade Total por Município")
-                    qtd_por_municipio = df_filtrado.groupby('nome_municipio')['qtd_total'].sum().sort_values(ascending=False)
-                    st.bar_chart(qtd_por_municipio, color="#D13F42")
-                    
-                with tab2:
-                    st.subheader("Evolução Mensal do Valor Total")
-                    df_temporal = df_filtrado.copy()
-                    df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
-                    soma_mensal = df_temporal.groupby('data')['vl_total'].sum().sort_index()
-                    st.line_chart(soma_mensal)
+            with tab1:
+                st.subheader("Análise para a seleção atual")
+                st.markdown("##### Valor Total por Município")
+                soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
+                st.bar_chart(soma_por_municipio)
+                st.markdown("##### Quantidade Total por Município")
+                qtd_por_municipio = df_filtrado.groupby('nome_municipio')['qtd_total'].sum().sort_values(ascending=False)
+                st.bar_chart(qtd_por_municipio, color="#D13F42")
                 
-                with tab3:
-                    st.subheader("Análise Geográfica por Município (Mapa de Calor)")
-                    df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
-                    if not df_mapa.empty:
-                        mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
-                        dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
-                        HeatMap(dados_calor, radius=15).add_to(mapa_calor)
-                        st_folium(mapa_calor, use_container_width=True, height=500)
-                    else:
-                        st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
+            with tab2:
+                st.subheader("Evolução Mensal do Valor Total")
+                df_temporal = df_filtrado.copy()
+                if not df_temporal.empty:
+                    df_temporal['data'] = pd.to_datetime(df_temporal['ano_aih'].astype(str) + '-' + df_temporal['mes_aih'].astype(str))
+                    soma_mensal = df_temporal.groupby('data')['vl_total'].sum()
+                    st.line_chart(soma_mensal)
+                else:
+                    st.warning("Não há dados para exibir com os filtros selecionados.")
+            
+            with tab3:
+                st.subheader("Análise Geográfica por Município (Mapa de Calor)")
+                df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
+                if not df_mapa.empty:
+                    mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
+                    dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
+                    HeatMap(dados_calor, radius=15).add_to(mapa_calor)
+                    st_folium(mapa_calor, use_container_width=True, height=500)
+                else:
+                    st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
 
-                with tab4:
-                    st.subheader("Amostra dos Dados Filtrados")
-                    st.dataframe(df_filtrado.head(100))
+            with tab4:
+                st.subheader("Amostra dos Dados Filtrados")
+                st.dataframe(df_filtrado.head(100))
     else:
         st.warning("A consulta não retornou dados.")
 else:
