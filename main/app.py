@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 from sqlalchemy import create_engine, text
 import plotly.express as px
-import pydeck as pdk
+import folium
+from streamlit_folium import st_folium
 
 st.set_page_config(page_title="Dashboard AIH - RIDE", layout="wide")
 
@@ -155,28 +156,19 @@ if engine:
                 
                 with tab3:
                     st.subheader("Análise Geográfica por Município (Mapa de Calor)")
+
                     df_mapa = df_filtrado.dropna(subset=['lat', 'lon'])
-                    if not df_mapa.empty:
-                        view_state = pdk.ViewState(latitude=-15.79, longitude=-47.88, zoom=7, pitch=50)
-                        layer = pdk.Layer(
-                            'HexagonLayer',
-                            data=df_mapa,
-                            get_position='[lon, lat]',
-                            radius=3000,
-                            elevation_scale=50,
-                            elevation_range=[0, 10000],
-                            get_elevation_value='vl_total',
-                            get_fill_color_value='vl_total',
-                            extruded=True,
-                        )
-                        st.pydeck_chart(pdk.Deck(
-                            map_style='mapbox://styles/mapbox/dark-v9',
-                            initial_view_state=view_state,
-                            layers=[layer],
-                            tooltip={"text": "Valor Total (soma): {elevationValue}"}
-                        ))
-                    else:
-                        st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
+
+                if not df_mapa.empty:
+                    mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8)
+
+                    dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
+
+                    folium.plugins.HeatMap(dados_calor, radius=15).add_to(mapa_calor)
+
+                    st_folium(mapa_calor, width=725, height=500)
+                else:
+                    st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
 
                 with tab4:
                     st.subheader("Amostra dos Dados Filtrados")
