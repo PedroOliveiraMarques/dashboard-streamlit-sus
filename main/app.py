@@ -157,12 +157,13 @@ if engine:
             
             with tab3:
                 st.subheader("Análise Geográfica por Município (Mapa de Calor)")
-                
+
+                # --- INÍCIO DO CÓDIGO DE DEPURAÇÃO ---
                 st.markdown("---")
                 st.subheader("🕵️‍♂️ Verificando os Dados para o Mapa")
 
                 st.write(f"Total de linhas após filtros da sidebar: **{len(df_filtrado)}**")
-
+                
                 df_mapa_debug = df_filtrado.dropna(subset=['lat', 'lon'])
                 st.write(f"Linhas restantes com coordenadas válidas (lat/lon): **{len(df_mapa_debug)}**")
 
@@ -176,16 +177,14 @@ if engine:
                     st.warning("O dataframe para o mapa ficou vazio. Verifique os filtros ou os dados de geolocalização.")
 
                 st.markdown("---")
+                # --- FIM DO CÓDIGO DE DEPURAÇÃO ---
 
                 df_mapa = df_filtrado.dropna(subset=['lat', 'lon'])
 
                 if not df_mapa.empty:
                     mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
-
                     dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
-
                     HeatMap(dados_calor, radius=15).add_to(mapa_calor)
-
                     st_folium(mapa_calor, use_container_width=True, height=500)
                 else:
                     st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
