@@ -6,41 +6,15 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 
-st.set_page_config(page_title="Dashboard AIH - RIDE", layout="wide")
+# ========== CONFIGURAÇÃO DA PÁGINA (DO NOVO MODELO) ==========
+st.set_page_config(
+    page_title="Dashboard AIH - RIDE",
+    layout="wide",
+    initial_sidebar_state="auto",
+    page_icon="🏥"
+)
 
-st.markdown("""
-<style>
-    .main .block-container {
-        padding-top: 1rem;
-    }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .header-container {
-        background-color: #1D355B;
-        padding: 2rem;
-        border-radius: 10px;
-        color: white;
-        margin-bottom: 2rem;
-    }
-    .kpi-card {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 1.5rem;
-        border-radius: 10px;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .kpi-card .stMetricValue {
-        color: white;
-        font-size: 2.2em;
-    }
-    .kpi-card .stMetricLabel {
-        color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 0.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
+# --- FUNÇÕES DE BANCO DE DADOS E CARREGAMENTO DE DADOS ---
 @st.cache_resource
 def init_connection():
     try:
@@ -61,6 +35,14 @@ def run_query(query, _engine):
         st.error(f"Erro ao executar a consulta: {e}")
         return None
 
+def footer():
+    st.markdown("""
+    <div style='text-align:center; color:#888; margin-top:40px;'>
+        Desenvolvido por Pedro e Mateus Lima para o Projeto de Análise de Dados | Fonte: DATASUS / AIH
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- Início da Aplicação ---
 engine = init_connection()
 
 if engine:
@@ -71,25 +53,35 @@ if engine:
         if 'latitude' in df.columns and 'longitude' in df.columns:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
         
+        # ========== HEADER PERSONALIZADO (DO NOVO MODELO) ==========
         with st.container():
-            st.markdown('<div class="header-container">', unsafe_allow_html=True)
-            st.title("🏥 Análise de Internações (AIH) na RIDE-DF")
-            st.markdown("Dashboard interativo para exploração de dados de Autorizações de Internação Hospitalar do DATASUS.")
-            st.markdown("---")
-            kpi1, kpi2, kpi3 = st.columns(3)
+            st.markdown("""
+                <div style="
+                    background-color: #2C225F;
+                    padding: 1.5rem 2rem;
+                    border-radius: 10px;
+                    color: white;
+                    text-align: left;
+                    font-size: 1.5rem;
+                    font-weight: bold;
+                    margin-bottom: 1rem;
+                ">
+                    🏥 Análise de Internações (AIH) na RIDE-DF
+                    <p style="font-size: 1rem; font-weight: normal; margin-top: 0.5rem;">
+                        Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.
+                    </p>
+                </div>
+            """ , unsafe_allow_html=True)
+
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
             with kpi1:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Valor Total (R$)", f"{df['vl_total'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.metric("Período Analisado", f"{df['ano_aih'].min()} - {df['ano_aih'].max()}")
             with kpi2:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Quantidade Total", f"{df['qtd_total'].sum():,.0f}")
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.metric("Fonte dos Dados", "DATASUS")
             with kpi3:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Nº de Registros", f"{len(df):,}")
-                st.markdown('</div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.metric("Nº de Registros Totais", f"{len(df):,}")
+            with kpi4:
+                st.metric("Atualização", "Ago 2025")
 
         col_filtros, col_conteudo = st.columns([1, 3])
         df_filtrado = df
@@ -122,24 +114,14 @@ if engine:
             if df_filtrado.empty:
                 st.warning("Nenhum registro encontrado para a combinação de filtros selecionada.")
             else:
-                st.subheader("Indicadores Dinâmicos da Seleção")
-                kpi_d1, kpi_d2 = st.columns(2)
-                populacao_filtrada = df_filtrado.drop_duplicates(subset=['codigo_municipio'])['numero_habitantes'].sum()
-                if populacao_filtrada > 0:
-                    valor_por_habitante = df_filtrado['vl_total'].sum() / populacao_filtrada
-                    kpi_d1.metric("Valor por Habitante (R$)", f"{valor_por_habitante:,.2f}")
-                    internacoes_por_1000_hab = (len(df_filtrado) / populacao_filtrada) * 1000
-                    kpi_d2.metric("Internações por 1.000 Habitantes", f"{internacoes_por_1000_hab:,.2f}")
-                st.markdown("---")
-                
-                tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Visão Geral", "Por Região", "Por Procedimento", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
+                tab1, tab2, tab3, tab4, tab5 = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
 
                 with tab1:
                     st.subheader(f"Análise de Ranking por Município")
                     st.markdown("##### Valor Total por Município (R$)")
                     soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
                     st.bar_chart(soma_por_municipio)
-                    if populacao_filtrada > 0 and 'numero_habitantes' in df_filtrado.columns:
+                    if 'numero_habitantes' in df_filtrado.columns and df_filtrado['numero_habitantes'].sum() > 0:
                         st.markdown("##### Top 15 Municípios por Valor Gasto por Habitante (R$)")
                         df_per_capita = df_filtrado.groupby('nome_municipio').agg(
                             vl_total_sum=('vl_total', 'sum'),
@@ -157,54 +139,15 @@ if engine:
                         st.markdown("##### Quantidade Total por Região")
                         qtd_por_regiao = df_filtrado.groupby('regiao_nome')['qtd_total'].sum().sort_values(ascending=False)
                         st.bar_chart(qtd_por_regiao, color="#D13F42")
-                
-                # --- NOVA ABA: ANÁLISE POR TIPO DE PROCEDIMENTO ---
-                with tab3:
-                    st.subheader("Análise por Tipo de Procedimento")
-
-                    # Mapeamento dos nomes das colunas para nomes legíveis
-                    mapeamento_grupos = {
-                        'vl_02': 'Diagnósticos',
-                        'vl_03': 'Clínicos',
-                        'vl_04': 'Cirúrgicos',
-                        'vl_05': 'Transplantes',
-                        'vl_06': 'Medicamentos',
-                        'vl_07': 'Órteses e Próteses',
-                        'vl_08': 'Ações Complementares'
-                    }
-                    colunas_grupos = list(mapeamento_grupos.keys())
-                    soma_grupos = df_filtrado[colunas_grupos].sum().rename(index=mapeamento_grupos).sort_values(ascending=False)
-                    soma_grupos = soma_grupos[soma_grupos > 0]
-
-                    if not soma_grupos.empty:
-                        st.markdown("##### Proporção de Gasto por Grupo de Procedimento")
-                        fig_pizza = px.pie(soma_grupos, values=soma_grupos.values, names=soma_grupos.index, hole=0.4)
-                        st.plotly_chart(fig_pizza, use_container_width=True)
                     
-                    st.markdown("---")
-
-                    mapeamento_cirurgias = {
-                        'vl_0401': 'Pele e Mucosa', 'vl_0403': 'Sistema Nervoso', 'vl_0404': 'Cabeça e Pescoço',
-                        'vl_0405': 'Visão', 'vl_0406': 'Aparelho Circulatório', 'vl_0407': 'Aparelho Digestivo',
-                        'vl_0408': 'Osteomuscular', 'vl_0409': 'Geniturinário', 'vl_0411': 'Obstétrica',
-                        'vl_0416': 'Oncologia'
-                    }
-                    colunas_cirurgias = list(mapeamento_cirurgias.keys())
-                    soma_cirurgias = df_filtrado[colunas_cirurgias].sum().rename(index=mapeamento_cirurgias).sort_values(ascending=False)
-                    soma_cirurgias = soma_cirurgias[soma_cirurgias > 0]
-
-                    if not soma_cirurgias.empty:
-                        st.markdown("##### Valor Gasto nos Principais Tipos de Cirurgia (R$)")
-                        st.bar_chart(soma_cirurgias)
-
-                with tab4:
-                    st.subheader("Evolução Mensal do Valor Total (R$)")
+                with tab3:
+                    st.subheader("Evolução Mensal do Valor Total")
                     df_temporal = df_filtrado.copy()
                     df_temporal['data'] = pd.to_datetime(df_filtrado['ano_aih'].astype(str) + '-' + df_filtrado['mes_aih'].astype(str))
                     soma_mensal = df_temporal.groupby('data')['vl_total'].sum().sort_index()
                     st.line_chart(soma_mensal)
                 
-                with tab5:
+                with tab4:
                     st.subheader("Análise Geográfica por Município (Mapa de Calor)")
                     if 'lat' in df_filtrado.columns:
                         df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
@@ -218,9 +161,11 @@ if engine:
                     else:
                         st.warning("Colunas 'latitude' e 'longitude' não encontradas nos dados do banco.")
 
-                with tab6:
+                with tab5:
                     st.subheader("Amostra dos Dados Filtrados")
                     st.dataframe(df_filtrado.head(100))
+                
+                footer()
     else:
         st.warning("A consulta não retornou dados.")
 else:
