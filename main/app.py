@@ -6,7 +6,6 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 
-# ===================== CONFIGURAÇÃO PÁGINA =====================
 st.set_page_config(
     page_title="Dashboard AIH - RIDE",
     layout="wide",
@@ -14,58 +13,39 @@ st.set_page_config(
     page_icon="🏥"
 )
 
-# ===================== CSS PADRÃO (com fundo roxo de herói) =====================
 st.markdown("""
 <style>
-    /* Fundo geral mais claro */
-    body, .main {
-        background-color: #F5F6FA;
-        font-family: 'Arial', sans-serif;
-    }
+    /* Fundo geral claro */
+    body, .main { background-color: #F5F6FA; font-family: 'Arial', sans-serif; }
 
-    /* --- HERO ROXO: pinta um bloco roxo atrás do topo da página --- */
-    /* O block-container é o wrapper do conteúdo principal do Streamlit */
-    div.block-container{
-        padding-top: 1.25rem;     /* afasta do topo */
-        position: relative;       /* habilita o ::before posicionar relativo */
-    }
-    div.block-container::before{
-        content: "";
-        position: absolute;
-        /* margens laterais para ficar com as "bordas" como na imagem */
-        left: 1.25rem;
-        right: 1.25rem;
-        top: 0.5rem;
-        height: 330px;            /* ALTURA do fundo roxo (ajuste se quiser) */
-        background: #2C225F;
+    /* HERO roxo que engloba título, descrição e métricas (altura automática, sem cortes) */
+    .hero {
+        background-color: #2C225F;
         border-radius: 12px;
-        z-index: 0;               /* fica atrás do conteúdo */
+        padding: 24px;
+        margin-bottom: 16px;
     }
-
-    /* Tudo que aparece no topo precisa “ficar acima” do fundo roxo */
-    .header-title, .header-desc, .metric-card { 
-        position: relative; 
-        z-index: 1; 
-    }
-
-    /* Título e descrição do cabeçalho (mesmo estilo que você curtiu) */
-    .header-title {
+    .hero .header-title {
+        color: #FFFFFF;
         font-size: 1.8rem;
         font-weight: 800;
-        color: #FFFFFF;
-        margin: 0.25rem 0 0.25rem 0;
+        margin: 4px 0 6px 0;
     }
-    .header-desc {
-        font-size: 1rem;
+    .hero .header-desc {
         color: #E6E6F0;
-        margin-bottom: 1rem;
+        font-size: 1rem;
+        margin-bottom: 18px;
         max-width: 1200px;
+        line-height: 1.35;
     }
-
-    /* Cartões de métricas brancos */
+    .hero .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+    }
     .metric-card {
-        background-color: white;
-        padding: 1rem;
+        background-color: #FFFFFF;
+        padding: 16px;
         border-radius: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         text-align: center;
@@ -73,7 +53,7 @@ st.markdown("""
     .metric-card h3 {
         font-size: 1rem;
         color: #4A4A4A;
-        margin-bottom: 0.35rem;
+        margin-bottom: 6px;
         font-weight: 700;
     }
     .metric-card p {
@@ -83,26 +63,25 @@ st.markdown("""
         color: #222;
     }
 
-    /* Caixas brancas do conteúdo/filtros */
+    /* Caixas brancas da página */
     .content-box {
-        background-color: white;
-        padding: 1rem;
+        background-color: #FFFFFF;
+        padding: 16px;
         border-radius: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-        margin-bottom: 1rem;
+        margin-bottom: 16px;
     }
 
     /* Rodapé */
     .footer {
-        text-align: center; 
-        color: #888; 
-        margin-top: 40px;
+        text-align:center; 
+        color:#888; 
+        margin-top:40px;
         font-size: 0.9rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ===================== FUNÇÕES BANCO DE DADOS =====================
 @st.cache_resource
 def init_connection():
     try:
@@ -130,7 +109,6 @@ def footer():
         unsafe_allow_html=True
     )
 
-# ===================== CONEXÃO E QUERY =====================
 engine = init_connection()
 
 if engine:
@@ -138,27 +116,41 @@ if engine:
     df = run_query(minha_query, engine)
 
     if df is not None and not df.empty:
+
         if 'latitude' in df.columns and 'longitude' in df.columns:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
 
-        # ===================== HEADER (título + descrição) =====================
-        st.markdown('<div class="header-title">🏥 Análise de Internações (AIH) na RIDE-DF</div>', unsafe_allow_html=True)
-        st.markdown('<div class="header-desc">Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS. É possível filtrar por UF, município, faixa populacional, ano e mês para personalizar a análise.</div>', unsafe_allow_html=True)
+        valor_total_fmt = f"{df['vl_total'].sum():,.2f}"
+        qtd_total_fmt = f"{df['qtd_total'].sum():,.0f}"
+        n_reg_fmt = f"{len(df):,}"
 
-        # ===================== MÉTRICAS (ficam por cima do fundo roxo) =====================
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown(f"<div class='metric-card'><h3>Valor Total (R$)</h3><p>{df['vl_total'].sum():,.2f}</p></div>", unsafe_allow_html=True)
-        with col2:
-            st.markdown(f"<div class='metric-card'><h3>Quantidade Total</h3><p>{df['qtd_total'].sum():,.0f}</p></div>", unsafe_allow_html=True)
-        with col3:
-            st.markdown(f"<div class='metric-card'><h3>Nº de Registros</h3><p>{len(df):,}</p></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="hero">
+            <div class="header-title">🏥 Análise de Internações (AIH) na RIDE-DF</div>
+            <div class="header-desc">
+                Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.
+                É possível filtrar por UF, município, faixa populacional, ano e mês para personalizar a análise.
+            </div>
+            <div class="metrics">
+                <div class="metric-card">
+                    <h3>Valor Total (R$)</h3>
+                    <p>{valor_total_fmt}</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Quantidade Total</h3>
+                    <p>{qtd_total_fmt}</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Nº de Registros</h3>
+                    <p>{n_reg_fmt}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        # ===================== LAYOUT PRINCIPAL =====================
         col_filtros, col_conteudo = st.columns([1, 3])
         df_filtrado = df.copy()
 
-        # ===== COLUNA DE FILTROS =====
         with col_filtros:
             st.markdown("<div class='content-box'>", unsafe_allow_html=True)
             st.header("Filtros")
@@ -190,7 +182,6 @@ if engine:
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'].isin(meses_selecionados)]
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # ===== COLUNA DE CONTEÚDO =====
         with col_conteudo:
             st.markdown("<div class='content-box'>", unsafe_allow_html=True)
             if df_filtrado.empty:
