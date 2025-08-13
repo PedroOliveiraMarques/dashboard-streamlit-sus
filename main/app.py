@@ -129,7 +129,7 @@ if engine:
             <div class="header-title">🏥 Análise de Internações (AIH) na RIDE-DF</div>
             <div class="header-desc">
                 Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.
-                É possível filtrar por UF, município, faixa populacional, ano e mês para personalizar a análise.
+                É possível filtrar por UF, município, ano e mês para personalizar a análise.
             </div>
             <div class="metrics">
                 <div class="metric-card">
@@ -165,12 +165,6 @@ if engine:
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
-            if 'faixa_populacao' in df_filtrado.columns:
-                faixas_disponiveis = sorted(df_filtrado['faixa_populacao'].unique())
-                faixas_selecionadas = st.multiselect('Faixa populacional:', faixas_disponiveis)
-                if faixas_selecionadas:
-                    df_filtrado = df_filtrado[df_filtrado['faixa_populacao'].isin(faixas_selecionadas)]
-
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
             anos_selecionados = st.multiselect('Ano(s):', anos_disponiveis)
             if anos_selecionados:
@@ -187,7 +181,7 @@ if engine:
             if df_filtrado.empty:
                 st.warning("Nenhum registro encontrado para a combinação de filtros selecionada.")
             else:
-                abas = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
+                abas = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos", "Gráfico de Pizza"])
 
                 with abas[0]:
                     st.subheader("Ranking por Município")
@@ -235,7 +229,45 @@ if engine:
                 with abas[4]:
                     st.subheader("Amostra dos Dados")
                     st.dataframe(df_filtrado.head(100))
+                
+                with abas[5]:
+                    st.subheader("Análise por Tipo de Procedimento")
 
+                    # Mapeamento dos nomes das colunas para nomes legíveis
+                    mapeamento_grupos = {
+                        'vl_02': 'Diagnósticos',
+                        'vl_03': 'Clínicos',
+                        'vl_04': 'Cirúrgicos',
+                        'vl_05': 'Transplantes',
+                        'vl_06': 'Medicamentos',
+                        'vl_07': 'Órteses e Próteses',
+                        'vl_08': 'Ações Complementares'
+                    }
+                    colunas_grupos = list(mapeamento_grupos.keys())
+                    soma_grupos = df_filtrado[colunas_grupos].sum().rename(index=mapeamento_grupos).sort_values(ascending=False)
+                    soma_grupos = soma_grupos[soma_grupos > 0]
+
+                    if not soma_grupos.empty:
+                        st.markdown("##### Proporção de Gasto por Grupo de Procedimento")
+                        fig_pizza = px.pie(soma_grupos, values=soma_grupos.values, names=soma_grupos.index, hole=0.4)
+                        st.plotly_chart(fig_pizza, use_container_width=True)
+                    
+                    st.markdown("---")
+
+                    mapeamento_cirurgias = {
+                        'vl_0401': 'Pele e Mucosa', 'vl_0403': 'Sistema Nervoso', 'vl_0404': 'Cabeça e Pescoço',
+                        'vl_0405': 'Visão', 'vl_0406': 'Aparelho Circulatório', 'vl_0407': 'Aparelho Digestivo',
+                        'vl_0408': 'Osteomuscular', 'vl_0409': 'Geniturinário', 'vl_0411': 'Obstétrica',
+                        'vl_0416': 'Oncologia'
+                    }
+                    colunas_cirurgias = list(mapeamento_cirurgias.keys())
+                    soma_cirurgias = df_filtrado[colunas_cirurgias].sum().rename(index=mapeamento_cirurgias).sort_values(ascending=False)
+                    soma_cirurgias = soma_cirurgias[soma_cirurgias > 0]
+
+                    if not soma_cirurgias.empty:
+                        st.markdown("##### Valor Gasto nos Principais Tipos de Cirurgia (R$)")
+                        st.bar_chart(soma_cirurgias)
+                
             st.markdown("</div>", unsafe_allow_html=True)
             footer()
 
