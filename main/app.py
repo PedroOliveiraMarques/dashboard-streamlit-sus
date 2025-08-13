@@ -10,8 +10,51 @@ st.set_page_config(
     page_title="Dashboard AIH - RIDE",
     layout="wide",
     initial_sidebar_state="auto",
-    page_icon="📊"
+    page_icon="🏥"
 )
+
+st.markdown("""
+<style>
+    /* Remove o padding padrão do Streamlit */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    #MainMenu, footer, header {
+        visibility: hidden;
+    }
+    /* Estilo do container do cabeçalho (fundo azul) */
+    .header-container {
+        background-color: #2C225F;
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    /* Estilo dos cartões de KPI individuais */
+    .kpi-card {
+        background-color: #FFFFFF;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: left;
+    }
+    /* Estilo para o valor da métrica */
+    .kpi-card .stMetricValue {
+        color: #2C225F; /* Cor do texto do valor */
+        font-size: 2.2em;
+        font-weight: bold;
+    }
+    /* Estilo para o rótulo da métrica */
+    .kpi-card .stMetricLabel {
+        color: #555555; /* Cor do texto do rótulo */
+        margin-bottom: 0.5rem;
+    }
+    /* Estilo para o delta (indicador de variação) */
+    .kpi-card .stMetricDelta {
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 @st.cache_resource
 def init_connection():
@@ -51,33 +94,26 @@ if engine:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
         
         with st.container():
-            st.markdown("""
-                <div style="
-                    background-color: #2C225F;
-                    padding: 1.5rem 2rem;
-                    border-radius: 10px;
-                    color: white;
-                    text-align: left;
-                    font-size: 1.5rem;
-                    font-weight: bold;
-                    margin-bottom: 1rem;
-                ">
-                    🏥 Análise de Internações (AIH) na RIDE-DF
-                    <p style="font-size: 1rem; font-weight: normal; margin-top: 0.5rem;">
-                        Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.
-                    </p>
-                </div>
-            """ , unsafe_allow_html=True)
+            st.markdown('<div class="header-container">', unsafe_allow_html=True)
+            st.markdown("## 🏥 Análise de Internações (AIH) na RIDE-DF")
+            st.markdown("Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.")
+            st.markdown("<br>", unsafe_allow_html=True)
 
-            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            kpi1, kpi2, kpi3 = st.columns(3)
             with kpi1:
-                st.metric("Período Analisado", f"{df['ano_aih'].min()} - {df['ano_aih'].max()}")
+                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+                st.metric("Valor Total (R$)", f"{df['vl_total'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+                st.markdown('</div>', unsafe_allow_html=True)
             with kpi2:
-                st.metric("Fonte dos Dados", "DATASUS")
+                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+                st.metric("Quantidade Total", f"{df['qtd_total'].sum():,.0f}")
+                st.markdown('</div>', unsafe_allow_html=True)
             with kpi3:
-                st.metric("Nº de Registros Totais", f"{len(df):,}")
-            with kpi4:
-                st.metric("Atualização", "Ago 2025")
+                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
+                st.metric("Nº de Registros", f"{len(df):,}")
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
 
         col_filtros, col_conteudo = st.columns([1, 3])
         df_filtrado = df
