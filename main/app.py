@@ -6,6 +6,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 
+# ===================== CONFIGURAÇÃO PÁGINA =====================
 st.set_page_config(
     page_title="Dashboard AIH - RIDE",
     layout="wide",
@@ -13,54 +14,52 @@ st.set_page_config(
     page_icon="🏥"
 )
 
+# ===================== CSS PADRÃO PROFESSOR =====================
 st.markdown("""
 <style>
-    /* Remove o padding padrão do Streamlit */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+    .main {
+        padding-top: 0rem !important;
     }
-    #MainMenu, footer, header {
-        visibility: hidden;
-    }
-    /* Estilo do container do cabeçalho (fundo azul) */
-    .header-container {
+    /* Header azul */
+    .header-box {
         background-color: #2C225F;
         padding: 2rem;
+        color: white;
+        margin-bottom: 1rem;
+        border-radius: 0;
+    }    
+    /* Métricas no header */
+    .metric-box .stMetric {
+        background-color: #3A2E7C;
+        padding: 1rem;
         border-radius: 10px;
         color: white;
-        margin-bottom: 2rem;
     }
-    /* Estilo dos cartões de KPI individuais */
-    .kpi-card {
-        background-color: #FFFFFF;
-        padding: 1.5rem;
+    /* Conteúdo branco */
+    .st-emotion-cache-10klw3m {
+        background-color: white !important;
+        padding: 1rem;
         border-radius: 10px;
-        text-align: left;
-    }
-    /* Estilo para o valor da métrica */
-    .kpi-card .stMetricValue {
-        color: #2C225F; /* Cor do texto do valor */
-        font-size: 2.2em;
+    } 
+    .st-emotion-cache-1q82h82 {
         font-weight: bold;
     }
-    /* Estilo para o rótulo da métrica */
-    .kpi-card .stMetricLabel {
-        color: #555555; /* Cor do texto do rótulo */
-        margin-bottom: 0.5rem;
-    }
-    /* Estilo para o delta (indicador de variação) */
-    .kpi-card .stMetricDelta {
-        font-weight: bold;
+    /* Rodapé */
+    .footer {
+        text-align:center; 
+        color:#888; 
+        margin-top:40px;
     }
 </style>
 """, unsafe_allow_html=True)
 
+# ===================== FUNÇÕES BANCO DE DADOS =====================
 @st.cache_resource
 def init_connection():
     try:
         db_credentials = st.secrets["postgres"]
-        connection_string = (f"postgresql+psycopg2://{db_credentials['user']}:{db_credentials['password']}@{db_credentials['host']}:{db_credentials['port']}/{db_credentials['database']}")
+        connection_string = (f"postgresql+psycopg2://{db_credentials['user']}:{db_credentials['password']}@"
+                             f"{db_credentials['host']}:{db_credentials['port']}/{db_credentials['database']}")
         return create_engine(connection_string)
     except Exception as e:
         st.error(f"Não foi possível conectar ao banco de dados: {e}")
@@ -77,12 +76,12 @@ def run_query(query, _engine):
         return None
 
 def footer():
-    st.markdown("""
-    <div style='text-align:center; color:#888; margin-top:40px;'>
-        Desenvolvido por Pedro e Mateus Lima para o Projeto de Análise de Dados | Fonte: DATASUS / AIH
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        "<div class='footer'>Desenvolvido por Pedro e Mateus Lima para o Projeto de Análise de Dados | Fonte: DATASUS / AIH</div>",
+        unsafe_allow_html=True
+    )
 
+# ===================== CONEXÃO E QUERY =====================
 engine = init_connection()
 
 if engine:
@@ -90,77 +89,78 @@ if engine:
     df = run_query(minha_query, engine)
 
     if df is not None and not df.empty:
+
         if 'latitude' in df.columns and 'longitude' in df.columns:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
-        
-        with st.container():
-            st.markdown('<div class="header-container">', unsafe_allow_html=True)
-            st.markdown("## 🏥 Análise de Internações (AIH) na RIDE-DF")
-            st.markdown("Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.")
-            st.markdown("<br>", unsafe_allow_html=True)
 
-            kpi1, kpi2, kpi3 = st.columns(3)
-            with kpi1:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Valor Total (R$)", f"{df['vl_total'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-                st.markdown('</div>', unsafe_allow_html=True)
-            with kpi2:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Quantidade Total", f"{df['qtd_total'].sum():,.0f}")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with kpi3:
-                st.markdown('<div class="kpi-card">', unsafe_allow_html=True)
-                st.metric("Nº de Registros", f"{len(df):,}")
-                st.markdown('</div>', unsafe_allow_html=True)
+        # ===================== HEADER =====================
+        with st.container():
+            st.markdown('<div class="header-box">', unsafe_allow_html=True)
+            st.markdown("## 🏥 Análise de Internações (AIH) na RIDE-DF")
+            st.markdown("""
+            Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS.
+            É possível filtrar por UF, município, faixa populacional, ano e mês para personalizar a análise.
+            """)
             
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Valor Total (R$)", f"{df['vl_total'].sum():,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            with col2:
+                st.metric("Quantidade Total", f"{df['qtd_total'].sum():,.0f}")
+            with col3:
+                st.metric("Nº de Registros", f"{len(df):,}")
+
             st.markdown('</div>', unsafe_allow_html=True)
 
+        # ===================== LAYOUT PRINCIPAL =====================
         col_filtros, col_conteudo = st.columns([1, 3])
-        df_filtrado = df
 
+        df_filtrado = df.copy()
+
+        # ===== COLUNA DE FILTROS =====
         with col_filtros:
             st.header("Filtros")
             
             ufs_disponiveis = sorted(df['uf_nome'].unique())
-            ufs_selecionadas = st.multiselect('Selecione a(s) UF(s):', ufs_disponiveis, placeholder="Todas as UFs")
+            ufs_selecionadas = st.multiselect('UF(s):', ufs_disponiveis)
             if ufs_selecionadas:
                 df_filtrado = df_filtrado[df_filtrado['uf_nome'].isin(ufs_selecionadas)]
             
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
-            municipios_selecionados = st.multiselect('Selecione o(s) município(s):', municipios_disponiveis, placeholder="Todos os Municípios")
+            municipios_selecionados = st.multiselect('Município(s):', municipios_disponiveis)
             if municipios_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['nome_municipio'].isin(municipios_selecionados)]
 
             if 'faixa_populacao' in df_filtrado.columns:
                 faixas_disponiveis = sorted(df_filtrado['faixa_populacao'].unique())
-                faixas_selecionadas = st.multiselect('Selecione a(s) faixa(s) populacional(is):', faixas_disponiveis, placeholder="Todas as Faixas")
+                faixas_selecionadas = st.multiselect('Faixa populacional:', faixas_disponiveis)
                 if faixas_selecionadas:
                     df_filtrado = df_filtrado[df_filtrado['faixa_populacao'].isin(faixas_selecionadas)]
 
-            st.markdown("---")
             anos_disponiveis = sorted(df_filtrado['ano_aih'].unique(), reverse=True)
-            anos_selecionados = st.multiselect('Selecione o(s) ano(s):', anos_disponiveis, placeholder="Todos os Anos")
+            anos_selecionados = st.multiselect('Ano(s):', anos_disponiveis)
             if anos_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['ano_aih'].isin(anos_selecionados)]
 
             meses_disponiveis = sorted(df_filtrado['mes_aih'].unique())
-            meses_selecionados = st.multiselect('Selecione o(s) mes(es):', meses_disponiveis, placeholder="Todos os Meses")
+            meses_selecionados = st.multiselect('Mês(es):', meses_disponiveis)
             if meses_selecionados:
                 df_filtrado = df_filtrado[df_filtrado['mes_aih'].isin(meses_selecionados)]
 
+        # ===== COLUNA DE CONTEÚDO =====
         with col_conteudo:
             if df_filtrado.empty:
                 st.warning("Nenhum registro encontrado para a combinação de filtros selecionada.")
             else:
-                tab1, tab2, tab3, tab4, tab5 = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
+                abas = st.tabs(["Visão Geral", "Por Região", "Análise Temporal", "Mapa Geográfico", "Dados Brutos"])
 
-                with tab1:
-                    st.subheader(f"Análise de Ranking por Município")
-                    st.markdown("##### Valor Total por Município (R$)")
+                with abas[0]:
+                    st.subheader("Ranking por Município")
                     soma_por_municipio = df_filtrado.groupby('nome_municipio')['vl_total'].sum().sort_values(ascending=False)
                     st.bar_chart(soma_por_municipio)
+
                     if 'numero_habitantes' in df_filtrado.columns and df_filtrado['numero_habitantes'].sum() > 0:
-                        st.markdown("##### Top 15 Municípios por Valor Gasto por Habitante (R$)")
+                        st.subheader("Top 15 Municípios por Valor Gasto por Habitante (R$)")
                         df_per_capita = df_filtrado.groupby('nome_municipio').agg(
                             vl_total_sum=('vl_total', 'sum'),
                             populacao_sum=('numero_habitantes', 'first')
@@ -168,42 +168,41 @@ if engine:
                         df_per_capita['valor_por_habitante'] = df_per_capita['vl_total_sum'] / df_per_capita['populacao_sum']
                         st.bar_chart(df_per_capita['valor_por_habitante'].sort_values(ascending=False).head(15), color="#D13F42")
 
-                with tab2:
-                    st.subheader("Análise de Ranking por Região")
+                with abas[1]:
+                    st.subheader("Ranking por Região")
                     if 'regiao_nome' in df_filtrado.columns:
-                        st.markdown("##### Valor Total por Região (R$)")
                         soma_por_regiao = df_filtrado.groupby('regiao_nome')['vl_total'].sum().sort_values(ascending=False)
                         st.bar_chart(soma_por_regiao)
-                        st.markdown("##### Quantidade Total por Região")
                         qtd_por_regiao = df_filtrado.groupby('regiao_nome')['qtd_total'].sum().sort_values(ascending=False)
                         st.bar_chart(qtd_por_regiao, color="#D13F42")
-                    
-                with tab3:
+
+                with abas[2]:
                     st.subheader("Evolução Mensal do Valor Total")
                     df_temporal = df_filtrado.copy()
                     df_temporal['data'] = pd.to_datetime(df_filtrado['ano_aih'].astype(str) + '-' + df_filtrado['mes_aih'].astype(str))
                     soma_mensal = df_temporal.groupby('data')['vl_total'].sum().sort_index()
                     st.line_chart(soma_mensal)
-                
-                with tab4:
-                    st.subheader("Análise Geográfica por Município (Mapa de Calor)")
+
+                with abas[3]:
+                    st.subheader("Mapa de Calor")
                     if 'lat' in df_filtrado.columns:
                         df_mapa = df_filtrado.dropna(subset=['lat', 'lon', 'vl_total'])
                         if not df_mapa.empty:
-                            mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()], zoom_start=8, tiles="cartodbdark_matter")
-                            dados_calor = df_mapa[['lat', 'lon', 'vl_total']].values.tolist()
-                            HeatMap(dados_calor, radius=15).add_to(mapa_calor)
+                            mapa_calor = folium.Map(location=[df_mapa['lat'].mean(), df_mapa['lon'].mean()],
+                                                    zoom_start=8, tiles="cartodbdark_matter")
+                            HeatMap(df_mapa[['lat', 'lon', 'vl_total']].values.tolist(), radius=15).add_to(mapa_calor)
                             st_folium(mapa_calor, use_container_width=True, height=500)
                         else:
-                            st.warning("Não há dados geográficos para exibir com os filtros selecionados.")
+                            st.warning("Não há dados geográficos para exibir.")
                     else:
-                        st.warning("Colunas 'latitude' e 'longitude' não encontradas nos dados do banco.")
+                        st.warning("Colunas de latitude e longitude não encontradas.")
 
-                with tab5:
-                    st.subheader("Amostra dos Dados Filtrados")
+                with abas[4]:
+                    st.subheader("Amostra dos Dados")
                     st.dataframe(df_filtrado.head(100))
-                
+
                 footer()
+
     else:
         st.warning("A consulta não retornou dados.")
 else:
