@@ -158,11 +158,9 @@ if engine:
                         qtd_por_regiao = df_filtrado.groupby('regiao_nome')['qtd_total'].sum().sort_values(ascending=False)
                         st.bar_chart(qtd_por_regiao, color="#D13F42")
                 
-                # --- NOVA ABA: ANÁLISE POR TIPO DE PROCEDIMENTO ---
                 with tab3:
                     st.subheader("Análise por Tipo de Procedimento")
 
-                    # Mapeamento dos nomes das colunas para nomes legíveis
                     mapeamento_grupos = {
                         'vl_02': 'Diagnósticos',
                         'vl_03': 'Clínicos',
