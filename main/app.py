@@ -6,40 +6,49 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 
-st.set_page_config(page_title="Dashboard AIH - RIDE", layout="wide")
+st.set_page_config(layout="wide")
 
 st.markdown("""
 <style>
-    .main .block-container {
-        padding-top: 1rem;
+    .main {
+        padding-top: 0rem !important;
     }
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .header-container {
-        background-color: #1D355B;
+    .st-emotion-cache-p6n0jw  {
+        background-color: #2C225F;
+        padding: 0.8rem 14rem 2rem 14rem;
+        color: white;
+        text-align: left;
+        border-radius: 8px;
+    }
+    
+    .header-box {
+        background-color: #2C225F;
         padding: 2rem;
+        color: white;
+        margin-bottom: 1rem;
+        border-radius: 0;
+    }    
+    
+    .metric-box .stMetric {
+        background-color: #3A2E7C;
+        padding: 1rem;
         border-radius: 10px;
         color: white;
-        margin-bottom: 2rem;
     }
-    .kpi-card {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 1.5rem;
+
+    .st-emotion-cache-10klw3m {
+        background-color: white !important;
+        padding: 1rem;
         border-radius: 10px;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    .kpi-card .stMetricValue {
-        color: white;
-        font-size: 2.2em;
-    }
-    .kpi-card .stMetricLabel {
-        color: rgba(255, 255, 255, 0.7);
-        margin-bottom: 0.5rem;
+    } 
+    
+    .st-emotion-cache-1q82h82 {
+	font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
+
+st.set_page_config(layout="wide")
 
 @st.cache_resource
 def init_connection():
@@ -170,6 +179,7 @@ if engine:
                         'vl_07': 'Órteses e Próteses',
                         'vl_08': 'Ações Complementares'
                     }
+                    
                     colunas_grupos = list(mapeamento_grupos.keys())
                     soma_grupos = df_filtrado[colunas_grupos].sum().rename(index=mapeamento_grupos).sort_values(ascending=False)
                     soma_grupos = soma_grupos[soma_grupos > 0]
