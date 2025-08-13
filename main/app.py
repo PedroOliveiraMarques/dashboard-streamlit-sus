@@ -14,72 +14,82 @@ st.set_page_config(
     page_icon="🏥"
 )
 
-# ===================== CSS PADRÃO PROFESSOR =====================
+# ===================== CSS PADRÃO (com fundo roxo de herói) =====================
 st.markdown("""
 <style>
-    /* Geral */
+    /* Fundo geral mais claro */
     body, .main {
         background-color: #F5F6FA;
         font-family: 'Arial', sans-serif;
     }
 
-    /* Cabeçalho */
-    .header-box {
-        background-color: #2C225F;
-        padding: 2rem;
-        color: white;
-        margin-bottom: 1.5rem;
-        border-radius: 10px;
+    /* --- HERO ROXO: pinta um bloco roxo atrás do topo da página --- */
+    /* O block-container é o wrapper do conteúdo principal do Streamlit */
+    div.block-container{
+        padding-top: 1.25rem;     /* afasta do topo */
+        position: relative;       /* habilita o ::before posicionar relativo */
+    }
+    div.block-container::before{
+        content: "";
+        position: absolute;
+        /* margens laterais para ficar com as "bordas" como na imagem */
+        left: 1.25rem;
+        right: 1.25rem;
+        top: 0.5rem;
+        height: 330px;            /* ALTURA do fundo roxo (ajuste se quiser) */
+        background: #2C225F;
+        border-radius: 12px;
+        z-index: 0;               /* fica atrás do conteúdo */
     }
 
+    /* Tudo que aparece no topo precisa “ficar acima” do fundo roxo */
+    .header-title, .header-desc, .metric-card { 
+        position: relative; 
+        z-index: 1; 
+    }
+
+    /* Título e descrição do cabeçalho (mesmo estilo que você curtiu) */
     .header-title {
         font-size: 1.8rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
+        font-weight: 800;
+        color: #FFFFFF;
+        margin: 0.25rem 0 0.25rem 0;
     }
-
     .header-desc {
         font-size: 1rem;
-        opacity: 0.9;
+        color: #E6E6F0;
+        margin-bottom: 1rem;
+        max-width: 1200px;
     }
 
-    /* Métricas */
-    .metric-container {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
+    /* Cartões de métricas brancos */
     .metric-card {
         background-color: white;
         padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         text-align: center;
-        flex: 1;
     }
     .metric-card h3 {
-        font-size: 1.2rem;
-        color: #333;
-        margin-bottom: 0.3rem;
+        font-size: 1rem;
+        color: #4A4A4A;
+        margin-bottom: 0.35rem;
+        font-weight: 700;
     }
     .metric-card p {
         font-size: 1.4rem;
-        font-weight: bold;
+        font-weight: 800;
         margin: 0;
+        color: #222;
     }
 
-    /* Caixa branca de conteúdo */
+    /* Caixas brancas do conteúdo/filtros */
     .content-box {
         background-color: white;
         padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         margin-bottom: 1rem;
-    }
-
-    /* Filtros */
-    .stSelectbox, .stMultiselect, .stSlider {
-        background-color: white !important;
     }
 
     /* Rodapé */
@@ -131,11 +141,11 @@ if engine:
         if 'latitude' in df.columns and 'longitude' in df.columns:
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
 
-        # ===================== HEADER =====================
-        st.markdown('<div class="header-box">', unsafe_allow_html=True)
+        # ===================== HEADER (título + descrição) =====================
         st.markdown('<div class="header-title">🏥 Análise de Internações (AIH) na RIDE-DF</div>', unsafe_allow_html=True)
         st.markdown('<div class="header-desc">Este painel apresenta análises interativas com dados de Autorizações de Internação Hospitalar do DATASUS. É possível filtrar por UF, município, faixa populacional, ano e mês para personalizar a análise.</div>', unsafe_allow_html=True)
-        
+
+        # ===================== MÉTRICAS (ficam por cima do fundo roxo) =====================
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown(f"<div class='metric-card'><h3>Valor Total (R$)</h3><p>{df['vl_total'].sum():,.2f}</p></div>", unsafe_allow_html=True)
@@ -143,8 +153,6 @@ if engine:
             st.markdown(f"<div class='metric-card'><h3>Quantidade Total</h3><p>{df['qtd_total'].sum():,.0f}</p></div>", unsafe_allow_html=True)
         with col3:
             st.markdown(f"<div class='metric-card'><h3>Nº de Registros</h3><p>{len(df):,}</p></div>", unsafe_allow_html=True)
-        
-        st.markdown('</div>', unsafe_allow_html=True)
 
         # ===================== LAYOUT PRINCIPAL =====================
         col_filtros, col_conteudo = st.columns([1, 3])
@@ -154,12 +162,12 @@ if engine:
         with col_filtros:
             st.markdown("<div class='content-box'>", unsafe_allow_html=True)
             st.header("Filtros")
-            
+
             ufs_disponiveis = sorted(df['uf_nome'].unique())
             ufs_selecionadas = st.multiselect('UF(s):', ufs_disponiveis)
             if ufs_selecionadas:
                 df_filtrado = df_filtrado[df_filtrado['uf_nome'].isin(ufs_selecionadas)]
-            
+
             municipios_disponiveis = sorted(df_filtrado['nome_municipio'].unique())
             municipios_selecionados = st.multiselect('Município(s):', municipios_disponiveis)
             if municipios_selecionados:
