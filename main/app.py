@@ -6,8 +6,10 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
 
+# Página em largura total
 st.set_page_config(layout="wide")
 
+# CSS para aplicar fundo azul ao header e métricas
 st.markdown("""
 <style>
     .main {
@@ -179,7 +181,7 @@ if engine:
                         'vl_07': 'Órteses e Próteses',
                         'vl_08': 'Ações Complementares'
                     }
-                    
+
                     colunas_grupos = list(mapeamento_grupos.keys())
                     soma_grupos = df_filtrado[colunas_grupos].sum().rename(index=mapeamento_grupos).sort_values(ascending=False)
                     soma_grupos = soma_grupos[soma_grupos > 0]
