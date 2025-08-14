@@ -5,38 +5,45 @@ import plotly.express as px
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import HeatMap
-
-st.set_page_config(
-    page_title="Dashboard AIH - RIDE",
-    layout="wide",
-    initial_sidebar_state="auto",
-    page_icon="🏥"
-)
+import boto3
+import json
 
 st.markdown("""
 <style>
     /* Fundo geral claro */
-    body, .main { background-color: #F5F6FA; font-family: 'Arial', sans-serif; }
+    body, .main { 
+        background-color: #F5F6FA; 
+        font-family: 'Arial', sans-serif; 
+        color: #2C3E50 !important; /* Texto escuro padrão para boa legibilidade */
+    }
+
+    /* Força cor escura para TUDO */
+    *, *::before, *::after {
+        color: #2C3E50 !important;
+    }
 
     /* HERO roxo que engloba título, descrição e métricas (altura automática, sem cortes) */
     .hero {
-        background-color: #2C225F;
+        background: linear-gradient(135deg, #1D345B 0%, #2C5282 100%);
         border-radius: 12px;
         padding: 24px;
         margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(29, 52, 91, 0.2);
     }
     .hero .header-title {
-        color: #FFFFFF;
+        color: #FFFFFF !important;
         font-size: 1.8rem;
         font-weight: 800;
         margin: 4px 0 6px 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
     .hero .header-desc {
-        color: #E6E6F0;
+        color: #E2E8F0 !important; /* Cor mais clara para melhor contraste */
         font-size: 1rem;
         margin-bottom: 18px;
         max-width: 1200px;
         line-height: 1.35;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
     .hero .metrics {
         display: grid;
@@ -49,10 +56,16 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         text-align: center;
+        border: 1px solid #E2E8F0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .metric-card h3 {
         font-size: 1rem;
-        color: #4A4A4A;
+        color: #4A5568 !important; /* Cor mais escura para melhor legibilidade */
         margin-bottom: 6px;
         font-weight: 700;
     }
@@ -60,7 +73,7 @@ st.markdown("""
         font-size: 1.4rem;
         font-weight: 800;
         margin: 0;
-        color: #222;
+        color: #1A202C !important; /* Cor bem escura para números */
     }
 
     /* Caixas brancas da página */
@@ -70,25 +83,180 @@ st.markdown("""
         border-radius: 12px;
         box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         margin-bottom: 16px;
+        border: 1px solid #E2E8F0;
+        color: #2D3748 !important; /* Texto escuro para conteúdo */
+    }
+
+    /* Força cor escura para elementos dentro de content-box */
+    .content-box * {
+        color: #2D3748 !important;
+    }
+
+    /* Títulos e subtítulos */
+    h1, h2, h3, h4, h5, h6 {
+        color: #1A202C !important;
+    }
+
+    /* TODAS as labels - abordagem mais agressiva */
+    label,
+    .stSelectbox label,
+    .stMultiSelect label,
+    .stTextInput label,
+    .stNumberInput label,
+    .stDateInput label,
+    .stTimeInput label,
+    .stTextArea label,
+    .stCheckbox label,
+    .stRadio label,
+    .stSlider label,
+    [data-testid="stSelectbox"] label,
+    [data-testid="stMultiSelect"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stDateInput"] label,
+    [data-testid="stTimeInput"] label,
+    [data-testid="stTextArea"] label,
+    [data-testid="stCheckbox"] label,
+    [data-testid="stRadio"] label,
+    [data-testid="stSlider"] label {
+        color: #2D3748 !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+
+    /* Streamlit widgets - seletores mais específicos */
+    .stSelectbox > div > label,
+    .stMultiSelect > div > label,
+    .stSelectbox div label,
+    .stMultiSelect div label {
+        color: #2D3748 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Seletores baseados em classes CSS do Streamlit */
+    .css-1cpxqw2,
+    .css-1d391kg,
+    .css-1y4p8pa,
+    .css-1v0mbdj label {
+        color: #2D3748 !important;
+    }
+
+    /* Tabs do Streamlit */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background-color: #F7FAFC;
+        color: #2D3748 !important;
+        border-radius: 8px 8px 0 0;
+        padding: 8px 16px;
+        border: 1px solid #E2E8F0;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #1A202C !important;
+        font-weight: 600;
+    }
+
+    /* Dataframes */
+    .dataframe {
+        color: #2D3748 !important;
+    }
+
+    /* Warnings e mensagens */
+    .stAlert {
+        color: #2D3748 !important;
     }
 
     /* Rodapé */
     .footer {
-        text-align:center; 
-        color:#888; 
-        margin-top:40px;
+        text-align: center; 
+        color: #718096 !important; /* Cor cinza mais escura para melhor legibilidade */
+        margin-top: 40px;
         font-size: 0.9rem;
+        padding: 16px;
+        background-color: #F7FAFC;
+        border-radius: 8px;
+        border-top: 2px solid #E2E8F0;
+    }
+
+    /* Override final - força cor escura para tudo exceto hero */
+    .main * {
+        color: #2D3748 !important;
+    }
+    
+    /* Exceções para o hero */
+    .hero * {
+        color: inherit !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 @st.cache_resource
+def get_secret(secret_name, region_name="us-east-1"):
+    """
+    Retrieve secret from AWS Secrets Manager
+    """
+    try:
+        # Create a Secrets Manager client
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=region_name
+        )
+        
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+        
+        # Parse the secret string
+        secret_string = get_secret_value_response['SecretString']
+        secret = json.loads(secret_string)
+        
+        return secret
+        
+    except json.JSONDecodeError as e:
+        st.error(f"Erro ao fazer parse do JSON do secret: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Erro ao recuperar secret do AWS Secrets Manager: {e}")
+        return None
+
+@st.cache_resource
 def init_connection():
     try:
-        db_credentials = st.secrets["postgres"]
-        connection_string = (f"postgresql+psycopg2://{db_credentials['user']}:{db_credentials['password']}@"
-                             f"{db_credentials['host']}:{db_credentials['port']}/{db_credentials['database']}")
-        return create_engine(connection_string)
+        # Get database credentials from AWS Secrets Manager
+        db_credentials = get_secret("rds-secret")
+        
+        if db_credentials is None:
+            st.error("Não foi possível recuperar as credenciais do banco de dados do AWS Secrets Manager")
+            return None
+        
+        # Check for required keys
+        required_keys = ['username', 'password', 'host', 'db_name']
+        missing_keys = [key for key in required_keys if key not in db_credentials]
+        
+        if missing_keys:
+            st.error(f"Credenciais incompletas no banco de dados")
+            return None
+            
+        # Build connection string using the actual secret structure
+        connection_string = (f"postgresql+psycopg2://{db_credentials['username']}:{db_credentials['password']}@"
+                             f"{db_credentials['host']}:{db_credentials.get('port', 5432)}/{db_credentials['db_name']}")
+        
+        engine = create_engine(connection_string)
+        
+        # Test the connection
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        
+        return engine
+        
+    except KeyError as e:
+        st.error(f"Configuração de banco de dados incompleta")
+        return None
     except Exception as e:
         st.error(f"Não foi possível conectar ao banco de dados: {e}")
         return None
